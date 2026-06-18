@@ -1,0 +1,7 @@
+original dataset: https://github.com/OPIXray-author/OPIXray
+
+dataset copy used from MyDrive:
+https://drive.google.com/drive/folders/1sZEeGvtQE9WICC0988Xyji2zWmZ0y_sq?usp=drive_link
+
+final run/results folder:
+https://drive.google.com/drive/folders/1bK5DXP2hi_HKhAzEE8Jo4oAWJGjHdtid?usp=drive_link

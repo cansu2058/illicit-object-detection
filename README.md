@@ -1,160 +1,103 @@
-# Illicit Object Detection in X-ray Baggage Images using YOLOv8n and OPIXray
+# X-ray Baggage Object Detection with YOLOv8n
 
-**Course Project Practical Part**
-**Author:** Cansu Karagoz
+**Five-class prohibited-object detection in X-ray baggage images using Python, Ultralytics YOLOv8n, and the OPIXray dataset.**
 
-## 1. Project Description
+This project covers the core stages of an object detection workflow: preparing annotations, fine-tuning a pretrained model, evaluating detection performance, and running inference on individual images. It was developed as an individual computer vision course project.
 
-This project implements and evaluates an object detection system for detecting prohibited knife/cutter-like objects in X-ray baggage images.
+## At a glance
 
-### Selected Method
+| Dataset | Model | Training images | Evaluation images | mAP@50 | mAP@50:95 |
+|---|---|---:|---:|---:|---:|
+| OPIXray | YOLOv8n | 7,109 | 1,776 | **0.862** | **0.405** |
 
-* YOLOv8n using the Ultralytics framework
+- **Precision:** 0.859  
+- **Recall:** 0.791  
+- **Training environment:** Google Colab, NVIDIA Tesla T4 GPU  
+- **Implementation:** Python and Ultralytics (PyTorch-based). Model training was managed through the Ultralytics API; no custom PyTorch training loop was implemented.
 
-### Selected Dataset
+> **Evaluation note:** The original OPIXray test directory was converted into the YOLO `val` directory and used for the reported evaluation. Because this directory was also configured as validation data during model training, these results should **not** be described as performance on a separately held-out, untouched final test set.
 
-* OPIXray full train/test split
+## Problem and approach
 
-### Detected Classes
+X-ray baggage screening can involve overlapping objects, unusual appearance, and differences from ordinary RGB photographs. The goal of this project was to train a detector to localize and classify five categories of prohibited items in X-ray images.
 
-| Class ID | Class Name       |
-| -------- | ---------------- |
-| 0        | Folding_Knife    |
-| 1        | Straight_Knife   |
-| 2        | Scissor          |
-| 3        | Utility_Knife    |
-| 4        | Multi-tool_Knife |
+The workflow was:
 
-The model was trained and evaluated on the full OPIXray dataset converted to YOLO format.
+1. Read OPIXray images and original bounding-box annotations.
+2. Convert bounding boxes to normalized YOLO labels.
+3. Fine-tune pretrained `yolov8n.pt` weights on the converted dataset.
+4. Evaluate overall and per-class detection metrics.
+5. Run single-image inference with bounding boxes, class names, and confidence scores.
 
-### Final Experiment
+### Object classes
 
-| Item                        | Value        |
-| --------------------------- | ------------ |
-| Training images             | 7,109        |
-| Validation/Test images      | 1,776        |
-| Model                       | YOLOv8n      |
-| Epochs                      | 20           |
-| Image size                  | 640 x 640    |
-| Batch size                  | 8            |
-| Platform                    | Google Colab |
-| GPU used for final training | Tesla T4     |
+| ID | Class |
+|---:|---|
+| 0 | Folding Knife |
+| 1 | Straight Knife |
+| 2 | Scissor |
+| 3 | Utility Knife |
+| 4 | Multi-tool Knife |
 
-## 2. Files Included
+## Results
 
-The submission package contains:
+### Overall detection metrics
 
-| File                              | Description                                                                              |
-| --------------------------------- | ---------------------------------------------------------------------------------------- |
-| `Karagoz_Cansu_Presentation.pptx` | PowerPoint presentation of the practical project.                                        |
-| `Object_Detection.ipynb`          | Main notebook containing the complete practical workflow, final results, and figures.    |
-| `requirements.txt`                | Python dependencies required to run the scripts.                                         |
-| `dataset_link.txt`                | Links to the original OPIXray dataset, the Drive dataset copy, and final results folder. |
-| `best.pt`                         | Best trained YOLOv8n model weights.                                                      |
-| `prepare_opixray_yolo.py`         | Script to convert original OPIXray annotations into YOLO format.                         |
-| `train_full_dataset.py`           | Script to train YOLOv8n on the full OPIXray YOLO-format dataset.                         |
-| `evaluate_full_dataset.py`        | Script to evaluate the trained model on the validation/test split.                       |
-| `inference_one_image.py`          | Script to run the trained model on one image.                                            |
+| Metric | Reported value |
+|---|---:|
+| Precision | 0.859 |
+| Recall | 0.791 |
+| mAP@50 | 0.862 |
+| mAP@50:95 | 0.405 |
 
-## 3. Installation Instructions
+### Per-class performance
 
-### Recommended Environment
+| Class | Precision | Recall | mAP@50 | mAP@50:95 |
+|---|---:|---:|---:|---:|
+| Folding Knife | 0.859 | 0.822 | 0.895 | 0.422 |
+| Straight Knife | 0.798 | 0.498 | 0.681 | 0.268 |
+| Scissor | 0.962 | 0.970 | 0.979 | 0.517 |
+| Utility Knife | 0.846 | 0.783 | 0.833 | 0.401 |
+| Multi-tool Knife | 0.833 | 0.883 | 0.921 | 0.419 |
 
-* Google Colab
-* Python 3.10 or later
-* GPU runtime recommended for training and evaluation
-* CPU runtime works for single-image inference and can run evaluation slowly
-* Ultralytics YOLOv8
+**Interpretation:** Scissor was the strongest class by mAP@50 (0.979). Straight Knife had the lowest recall (0.498), suggesting a substantial number of missed detections for this class. The difference between mAP@50 and mAP@50:95 also suggests room for improvement at stricter bounding-box overlap thresholds.
 
-In Google Colab, enable GPU when available:
+### Runtime measurements
 
-```text
-Runtime -> Change runtime type -> Hardware accelerator -> GPU
-```
+The original experiment reported the following timing figures on its evaluation environment:
 
-To check GPU availability:
+| Measurement | Reported value |
+|---|---:|
+| Inference time | 2.5 ms/image |
+| End-to-end time | 5.2 ms/image |
 
-```bash
-!nvidia-smi
-```
+These are experimental timing measurements, **not** a verified real-time application benchmark. They should not be interpreted as guaranteed throughput for a camera stream or another deployment environment.
 
-Install the required dependencies:
+### Qualitative outputs
 
-```bash
-pip install -r requirements.txt
-```
+The project notebook, [`Object_Detection.ipynb`](Object_Detection.ipynb), contains the experiment workflow and figures. Additional artifacts saved during the original run include `val_batch0_pred.jpg`, `val_batch0_labels.jpg`, `results.png`, and confusion-matrix images. These are not embedded here because they are not currently included as standalone images in this repository.
 
-Or in Google Colab:
+Once those actual output files have been added to the repository, a small gallery of correctly labeled predictions and failure cases can be included here.
 
-```bash
-!pip install -r requirements.txt
-```
+## Dataset preparation
 
-The `requirements.txt` file contains:
+The original dataset and its usage terms are available from the [OPIXray project](https://github.com/OPIXray-author/OPIXray). Dataset download and result-folder references from the original coursework are listed in [`dataset_link.txt`](dataset_link.txt); access to external Drive files may vary.
 
-```text
-ultralytics
-opencv-python
-pillow
-matplotlib
-pandas
-pyyaml
-```
-
-If needed, Ultralytics can also be installed directly:
-
-```bash
-pip install ultralytics
-```
-
-To mount Google Drive in Colab:
-
-```python
-from google.colab import drive
-drive.mount("/content/drive")
-```
-
-### Important Colab Note
-
-The Python scripts include an optional Drive mount step, but Colab subprocesses cannot always mount Drive correctly.
-
-For the most reliable run, mount Drive manually in a notebook cell first, change to the project folder, and add `--no-mount` to script commands:
-
-```bash
-%cd /content/drive/MyDrive/Project
-!pip install -r requirements.txt
-!python inference_one_image.py --no-mount
-```
-
-## 4. Dataset Information
-
-### Original Dataset
-
-OPIXray
-
-### Original Dataset Link
-
-[OPIXray GitHub Repository](https://github.com/OPIXray-author/OPIXray)
-
-### Dataset Copy and Final Results Folder
-
-See `dataset_link.txt`.
-
-The original OPIXray annotation format is:
+Original annotation format:
 
 ```text
 image_name class_name xmin ymin xmax ymax
 ```
 
-The dataset was converted to YOLO format:
+Converted YOLO annotation format:
 
 ```text
 class_id x_center y_center width height
 ```
 
-All bounding box coordinates are normalized between 0 and 1.
+The center coordinates, width, and height are normalized relative to image dimensions, with values in the range `[0, 1]`.
 
-### Expected YOLO Dataset Structure
+Expected converted dataset layout:
 
 ```text
 OPIXray_full_YOLO/
@@ -167,7 +110,7 @@ OPIXray_full_YOLO/
 └── data.yaml
 ```
 
-The `data.yaml` file should contain:
+Example `data.yaml` (change `path` for your environment):
 
 ```yaml
 path: /content/OPIXray_full_YOLO
@@ -182,194 +125,117 @@ names:
   4: Multi-tool_Knife
 ```
 
-If the dataset is stored in Google Drive, update the path, for example:
+> **Split terminology:** Here, `val` is a **YOLO folder name** used for the original OPIXray test-directory images. Using that split for validation during fine-tuning means it is not an independent final test set. A future experiment should reserve a separate, untouched test split for final reporting.
 
-```yaml
-path: /content/drive/MyDrive/OPIXray_full_YOLO
-```
+## Training configuration
 
-## 5. Prepare Dataset in YOLO Format
+| Setting | Value |
+|---|---|
+| Starting weights | Pretrained `yolov8n.pt` |
+| Epochs | 20 |
+| Image size | 640 × 640 |
+| Batch size | 8 |
+| Platform | Google Colab |
+| GPU | NVIDIA Tesla T4 |
 
-If starting from the original OPIXray dataset folders, run:
+Training used the Ultralytics `YOLO(...).train(...)` interface. Ultralytics relies on PyTorch internally; this project does not claim a custom neural-network architecture or manually implemented optimization loop.
 
-```bash
-python prepare_opixray_yolo.py --root /content/drive/MyDrive/OPIXray_full --out /content/OPIXray_full_YOLO --overwrite
-```
+## Installation and usage
 
-In Google Colab, after mounting Drive and changing to the project folder, use:
+### Requirements
 
-```bash
-!python prepare_opixray_yolo.py --no-mount --overwrite
-```
-
-### Expected Original OPIXray Structure
-
-```text
-OPIXray_full/
-├── train/
-│   ├── train_image/
-│   └── train_annotation/
-└── test/
-    ├── test_image/
-    └── test_annotation/
-```
-
-The script creates:
-
-```text
-OPIXray_full_YOLO/
-├── images/
-│   ├── train/
-│   └── val/
-├── labels/
-│   ├── train/
-│   └── val/
-└── data.yaml
-```
-
-## 6. Training on the Full Dataset
-
-To train YOLOv8n on the full OPIXray dataset:
+Python 3.10 or later is recommended. A GPU is useful for training; single-image inference can also run on CPU.
 
 ```bash
-python train_full_dataset.py --data /content/OPIXray_full_YOLO/data.yaml --epochs 20 --imgsz 640 --batch 8
+pip install -r requirements.txt
 ```
 
-In Google Colab, if the dataset is stored in Drive, use:
+The repository's [`requirements.txt`](requirements.txt) lists the packages used by the project. Package versions are not pinned, so reproducing results exactly may require matching the original environment.
+
+The commands below assume you have obtained the OPIXray dataset and updated filesystem paths accordingly.
+
+### 1. Prepare labels
 
 ```bash
-!python train_full_dataset.py --no-mount --data /content/drive/MyDrive/OPIXray_full_YOLO/data.yaml --epochs 20 --imgsz 640 --batch 8
+python prepare_opixray_yolo.py \
+  --root /path/to/OPIXray_full \
+  --out /path/to/OPIXray_full_YOLO \
+  --overwrite
 ```
 
-The training script uses:
+This generates YOLO-format labels and the corresponding dataset layout. The script also provides Colab/Drive options; inspect its command-line arguments if running in another environment.
 
-| Parameter  | Value                      |
-| ---------- | -------------------------- |
-| Model      | YOLOv8n pretrained weights |
-| Epochs     | 20                         |
-| Image size | 640                        |
-| Batch size | 8                          |
-
-The trained model is saved by Ultralytics in a `runs/detect/` folder.
-
-The best model is saved as:
-
-```text
-weights/best.pt
-```
-
-> Note: Training on CPU is possible but not recommended because it can take a very long time. The submitted final model is already included as `best.pt`.
-
-## 7. Evaluation on the Full Dataset
-
-To evaluate the trained model on the validation/test set:
+### 2. Train
 
 ```bash
-python evaluate_full_dataset.py --weights best.pt --data /content/OPIXray_full_YOLO/data.yaml
+python train_full_dataset.py \
+  --data /path/to/OPIXray_full_YOLO/data.yaml \
+  --epochs 20 \
+  --imgsz 640 \
+  --batch 8
 ```
 
-If using files stored in Google Drive from Colab:
+Ultralytics saves training outputs under a `runs/detect/` directory. The best checkpoint from the original experiment is also included as [`best.pt`](best.pt).
+
+### 3. Evaluate
 
 ```bash
-!python evaluate_full_dataset.py --no-mount --weights /content/drive/MyDrive/opixray_full_yolov8n_20epochs_final/weights/best.pt --data /content/drive/MyDrive/OPIXray_full_YOLO/data.yaml
+python evaluate_full_dataset.py \
+  --weights best.pt \
+  --data /path/to/OPIXray_full_YOLO/data.yaml
 ```
 
-If the default Drive folders are already used, this shorter command is enough:
+This evaluates the checkpoint on the split referenced by the `val` field in `data.yaml`. Ensure that the evaluation setup matches the intended reporting protocol.
+
+### 4. Run single-image inference
 
 ```bash
-!python evaluate_full_dataset.py --no-mount
+python inference_one_image.py \
+  --weights best.pt \
+  --image /path/to/sample_image.jpg
 ```
 
-The evaluation reports:
+The inference script produces an annotated image with predicted bounding boxes, classes, and confidence scores. The original project saves output in a `runs/detect/` subdirectory.
 
-* Precision
-* Recall
-* mAP@50
-* mAP@50:95
-* Inference speed
+### Google Colab note
 
-## 8. Single-Image Inference
+If your files are in Google Drive, mount Drive in a notebook cell first:
 
-To run the trained model on one image:
-
-```bash
-python inference_one_image.py --weights best.pt --image sample_image.jpg
+```python
+from google.colab import drive
+drive.mount('/content/drive')
 ```
 
-Example using Google Drive paths from Colab:
+Then navigate to the repository and invoke scripts from a notebook with `!python`. The scripts support a `--no-mount` option for situations where Drive has already been mounted in the notebook. Avoid relying on a Drive mount initiated inside a separate subprocess.
 
-```bash
-!python inference_one_image.py --no-mount --weights /content/drive/MyDrive/opixray_full_yolov8n_20epochs_final/weights/best.pt --image /content/drive/MyDrive/OPIXray_full/test/test_image/example.jpg
-```
+## Repository contents
 
-If the default Drive folders are already used, this shorter command is enough and automatically selects one test image:
+| File | Purpose |
+|---|---|
+| [`prepare_opixray_yolo.py`](prepare_opixray_yolo.py) | Convert OPIXray annotations into YOLO format |
+| [`train_full_dataset.py`](train_full_dataset.py) | Fine-tune pretrained YOLOv8n weights |
+| [`evaluate_full_dataset.py`](evaluate_full_dataset.py) | Evaluate trained weights |
+| [`inference_one_image.py`](inference_one_image.py) | Run prediction on an individual X-ray image |
+| [`Object_Detection.ipynb`](Object_Detection.ipynb) | Notebook with end-to-end coursework workflow and figures |
+| [`best.pt`](best.pt) | Checkpoint from the final training run |
+| [`requirements.txt`](requirements.txt) | Python dependencies |
+| [`dataset_link.txt`](dataset_link.txt) | Dataset and results references |
+| [`Karagoz_Cansu_Presentation.pptx`](Karagoz_Cansu_Presentation.pptx) | Project presentation |
 
-```bash
-!python inference_one_image.py --no-mount
-```
+## Limitations and next steps
 
-If no image path is provided, the script can automatically select one image from the available OPIXray test/validation folder, if the dataset folder exists.
+- **Uneven class performance:** Straight Knife recall (0.498) was considerably lower than other categories. A targeted review of false negatives would help identify recurring failure patterns.
+- **Stricter localization thresholds:** mAP@50:95 (0.405) was markedly lower than mAP@50 (0.862). Better bounding-box localization and targeted training experiments may help.
+- **Evaluation protocol:** The original test directory was used as the YOLO validation split. A new, truly held-out test set is needed for an unbiased final assessment after model selection.
+- **Generalization:** The reported results apply to the evaluated OPIXray images; performance on other X-ray systems, acquisition conditions, or object categories has not been established.
+- **Deployment:** Real-time camera-stream throughput, memory consumption, robustness, and operational reliability have not been benchmarked.
 
-The output prediction image is saved by Ultralytics in:
+Potential follow-up experiments include error analysis by class, augmentation experiments, comparisons between YOLO model sizes, a proper train/validation/test split, and an end-to-end inference demonstration.
 
-```text
-runs/detect/single_image_prediction/
-```
+## Acknowledgments
 
-The output image contains the detected object bounding boxes, class labels, and confidence scores.
+- [OPIXray dataset and project](https://github.com/OPIXray-author/OPIXray)
+- [Ultralytics YOLO documentation](https://docs.ultralytics.com/)
 
-## 9. Final Results
-
-The final YOLOv8n model achieved the following results on the full OPIXray validation/test split:
-
-### Overall Results
-
-| Metric          |        Value |
-| --------------- | -----------: |
-| Precision       |        0.859 |
-| Recall          |        0.791 |
-| mAP@50          |        0.862 |
-| mAP@50:95       |        0.405 |
-| Inference time  | 2.5 ms/image |
-| End-to-end time | 5.2 ms/image |
-| Inference FPS   |      400 FPS |
-| End-to-end FPS  |   192.31 FPS |
-
-### Class-Level Results
-
-| Class            | Precision | Recall | mAP@50 | mAP@50:95 |
-| ---------------- | --------: | -----: | -----: | --------: |
-| Folding_Knife    |     0.859 |  0.822 |  0.895 |     0.422 |
-| Straight_Knife   |     0.798 |  0.498 |  0.681 |     0.268 |
-| Scissor          |     0.962 |  0.970 |  0.979 |     0.517 |
-| Utility_Knife    |     0.846 |  0.783 |  0.833 |     0.401 |
-| Multi-tool_Knife |     0.833 |  0.883 |  0.921 |     0.419 |
-
-## 10. Saved Results
-
-The final results folder contains:
-
-```text
-results.csv
-class_level_results.csv
-results.png
-confusion_matrix.png
-confusion_matrix_normalized.png
-BoxPR_curve.png
-BoxF1_curve.png
-BoxP_curve.png
-BoxR_curve.png
-val_batch0_pred.jpg
-val_batch0_labels.jpg
-weights/best.pt
-```
-
-These files are used in the PowerPoint presentation to show training curves, confusion matrix, qualitative predictions, and final metrics.
-
-## 11. Notes
-
-A small subset was first used to verify that the dataset conversion, training, and evaluation pipeline worked correctly. After confirming the pipeline, the final experiment was performed using the full OPIXray train/test split.
-
-The final model and results were saved to Google Drive to avoid losing files after the Colab runtime disconnected.
-
-Files stored only in `/content/` are temporary in Google Colab. For reproducibility, important files such as `best.pt`, result figures, and CSV metric files should be saved in Google Drive or included in the final submission ZIP.
+**Author:** Cansu Karagöz  
+**Project type:** Individual academic computer vision project
